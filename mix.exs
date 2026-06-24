@@ -32,7 +32,7 @@ defmodule Defdo.Tenant.Boundary.MixProject do
 
   defp deps do
     [
-      {:defdo_tenant, path: "../defdo_tenant", override: true},
+      {:defdo_tenant, "~> 0.8.6", organization: @organization},
       {:oban, "~> 2.17"},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
