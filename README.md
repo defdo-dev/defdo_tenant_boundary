@@ -64,6 +64,25 @@ defmodule MyApp.TenantCache do
 end
 ```
 
+### PubSub
+
+```elixir
+# Broadcast — captures context automatically
+Defdo.Tenant.PubSub.broadcast(MyApp.PubSub, "tenant:orders", "order:created", %{order_id: 123})
+
+# Subscribe — messages arrive as {:tenant_event, envelope}
+Defdo.Tenant.PubSub.subscribe(MyApp.PubSub, "tenant:orders")
+
+# Handle — restores context from envelope
+def handle_info({:tenant_event, envelope}, state) do
+  Defdo.Tenant.PubSub.handle_message(envelope, fn payload ->
+    # tenant context restored — Repo queries scoped
+    process_order(payload)
+  end)
+  {:noreply, state}
+end
+```
+
 ## Enforcement Modes
 
 All wrappers respect `Defdo.Tenant.Config` enforcement modes:
