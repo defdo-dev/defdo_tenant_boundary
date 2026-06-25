@@ -2,7 +2,7 @@ defmodule DefdoTenantBoundary.StorageTest do
   use ExUnit.Case, async: true
 
   alias Defdo.Tenant
-  alias Defdo.Tenant.Storage
+  alias Defdo.Tenant.Boundary.Storage
 
   describe "path/1" do
     test "prefixes with tenants/:tenant_id when context is set" do
@@ -11,12 +11,12 @@ defmodule DefdoTenantBoundary.StorageTest do
       end)
     end
 
-    test "returns global/ prefix in observe mode when no context" do
+    test "returns unknown/ prefix in observe mode when no context" do
       original = Application.get_env(:defdo_tenant, :enforcement, :observe)
 
       try do
         Application.put_env(:defdo_tenant, :enforcement, :observe)
-        assert Storage.path("uploads/file.txt") == "global/uploads/file.txt"
+        assert Storage.path("uploads/file.txt") == "unknown/uploads/file.txt"
       after
         if original do
           Application.put_env(:defdo_tenant, :enforcement, original)

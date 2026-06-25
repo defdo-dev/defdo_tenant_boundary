@@ -1,4 +1,4 @@
-defmodule Defdo.Tenant.GenServer do
+defmodule Defdo.Tenant.Boundary.GenServer do
   @moduledoc """
   Tenant-context carrying GenServer helpers.
 
@@ -19,19 +19,19 @@ defmodule Defdo.Tenant.GenServer do
 
         @impl true
         def init(tenant_id) do
-          Defdo.Tenant.GenServer.capture_init_context()
+          Defdo.Tenant.Boundary.GenServer.capture_init_context()
           {:ok, %{cache: %{}}}
         end
 
         @impl true
         def handle_call({:get, key}, _from, state) do
-          Defdo.Tenant.GenServer.restore_context()
+          Defdo.Tenant.Boundary.GenServer.restore_context()
           {:reply, Map.get(state.cache, key), state}
         end
 
         @impl true
         def handle_cast({:put, key, value}, state) do
-          Defdo.Tenant.GenServer.restore_context()
+          Defdo.Tenant.Boundary.GenServer.restore_context()
           {:noreply, Map.put(state, :cache, Map.put(state.cache, key, value))}
         end
       end
@@ -51,15 +51,15 @@ defmodule Defdo.Tenant.GenServer do
 
   | Event | Metadata |
   |---|---|
-  | `[:defdo, :tenant, :genserver, :context_captured]` | `module`, `scope` |
-  | `[:defdo, :tenant, :genserver, :context_missing]` | `module` |
-  | `[:defdo, :tenant, :context, :restored]` | `boundary: :genserver`, `module`, `scope` |
+  | `[:defdo, :tenant, :genserver, :context_captured]` | `boundary`, `scope` |
+  | `[:defdo, :tenant, :genserver, :context_missing]` | `boundary` |
+  | `[:defdo, :tenant, :context, :restored]` | `boundary`, `scope` |
 
   ## See also
 
   * `Defdo.Tenant.Context` — process-local context storage
   * `Defdo.Tenant.Config` — enforcement modes
-  * `Defdo.Tenant.Worker` — automatic wrapping via `use` macro (Oban)
+  * `Defdo.Tenant.Boundary.Worker` — automatic wrapping via `use` macro (Oban)
   * `Defdo.Tenant.Boundary.Task` — automatic wrapping for `Task.async`
   """
 
@@ -82,7 +82,7 @@ defmodule Defdo.Tenant.GenServer do
         :telemetry.execute(
           [:defdo, :tenant, :genserver, :context_captured],
           %{count: 1},
-          %{module: nil, scope: ctx.scope}
+          %{boundary: :genserver, scope: ctx.scope}
         )
 
         Process.put(@genserver_context_key, Context.to_serializable(ctx))
@@ -92,7 +92,7 @@ defmodule Defdo.Tenant.GenServer do
         :telemetry.execute(
           [:defdo, :tenant, :genserver, :context_missing],
           %{count: 1},
-          %{module: nil}
+          %{boundary: :genserver}
         )
 
         cond do

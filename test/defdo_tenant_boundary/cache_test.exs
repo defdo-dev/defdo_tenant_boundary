@@ -2,7 +2,7 @@ defmodule DefdoTenantBoundary.CacheTest do
   use ExUnit.Case, async: true
 
   alias Defdo.Tenant
-  alias Defdo.Tenant.Cache
+  alias Defdo.Tenant.Boundary.Cache
 
   describe "key/1" do
     test "prefixes with tenant_id when context is set" do
@@ -11,12 +11,12 @@ defmodule DefdoTenantBoundary.CacheTest do
       end)
     end
 
-    test "returns global: prefix in observe mode when no context" do
+    test "returns unknown: prefix in observe mode when no context" do
       original = Application.get_env(:defdo_tenant, :enforcement, :observe)
 
       try do
         Application.put_env(:defdo_tenant, :enforcement, :observe)
-        assert Cache.key("user:1") == "global:user:1"
+        assert Cache.key("user:1") == "unknown:user:1"
       after
         if original do
           Application.put_env(:defdo_tenant, :enforcement, original)

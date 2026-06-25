@@ -1,4 +1,4 @@
-defmodule Defdo.Tenant.PubSub do
+defmodule Defdo.Tenant.Boundary.PubSub do
   @moduledoc """
   Tenant-aware PubSub envelope.
 
@@ -12,7 +12,7 @@ defmodule Defdo.Tenant.PubSub do
 
   ## Solution
 
-  `Defdo.Tenant.PubSub` wraps every outgoing message in a tenant-aware envelope
+  `Defdo.Tenant.Boundary.PubSub` wraps every outgoing message in a tenant-aware envelope
   that carries the serialized `Defdo.Tenant.Context`. Subscribers unwrap the
   envelope with `handle_message/2`, which restores context before the callback.
 
@@ -33,12 +33,12 @@ defmodule Defdo.Tenant.PubSub do
   ## Usage — broadcast
 
       # Phoenix.PubSub
-      Defdo.Tenant.PubSub.broadcast(
+      Defdo.Tenant.Boundary.PubSub.broadcast(
         MyApp.PubSub, "tenant:orders", "order:created", %{order_id: 123}
       )
 
       # Without topic:
-      Defdo.Tenant.PubSub.broadcast(
+      Defdo.Tenant.Boundary.PubSub.broadcast(
         MyApp.PubSub, "tenant:orders", :order_created, %{order_id: 123}
       )
 
@@ -46,12 +46,12 @@ defmodule Defdo.Tenant.PubSub do
 
       # In your subscriber GenServer:
       def init(_) do
-        Defdo.Tenant.PubSub.subscribe(MyApp.PubSub, "tenant:orders")
+        Defdo.Tenant.Boundary.PubSub.subscribe(MyApp.PubSub, "tenant:orders")
         {:ok, %{}}
       end
 
       def handle_info({:tenant_event, envelope}, state) do
-        Defdo.Tenant.PubSub.handle_message(envelope, fn payload ->
+        Defdo.Tenant.Boundary.PubSub.handle_message(envelope, fn payload ->
           # tenant context restored — Repo queries scoped
           process_order(payload)
         end)
@@ -82,7 +82,7 @@ defmodule Defdo.Tenant.PubSub do
 
   * `Defdo.Tenant.Context` — process-local context storage
   * `Defdo.Tenant.Config` — enforcement modes
-  * `Defdo.Tenant.Worker` — same pattern for Oban workers
+  * `Defdo.Tenant.Boundary.Worker` — same pattern for Oban workers
   """
 
   alias Defdo.Tenant.Config
@@ -103,7 +103,7 @@ defmodule Defdo.Tenant.PubSub do
 
   ## Example
 
-      Defdo.Tenant.PubSub.broadcast(
+      Defdo.Tenant.Boundary.PubSub.broadcast(
         MyApp.PubSub, "tenant:orders", "order:created", %{order_id: 123}
       )
   """
@@ -151,14 +151,14 @@ defmodule Defdo.Tenant.PubSub do
         cond do
           Config.raising?() ->
             raise ArgumentError,
-                  "Defdo.Tenant.PubSub broadcast of #{inspect(event_str)} has no tenant context. " <>
+                  "Defdo.Tenant.Boundary.PubSub broadcast of #{inspect(event_str)} has no tenant context. " <>
                     "Set a context with Defdo.Tenant.with_tenant/2."
 
           Config.warning?() ->
             require Logger
 
             Logger.warning(
-              "Defdo.Tenant.PubSub broadcast of #{inspect(event_str)} has no tenant context"
+              "Defdo.Tenant.Boundary.PubSub broadcast of #{inspect(event_str)} has no tenant context"
             )
 
           true ->
@@ -182,7 +182,7 @@ defmodule Defdo.Tenant.PubSub do
   ## Example
 
       def init(_) do
-        Defdo.Tenant.PubSub.subscribe(MyApp.PubSub, "tenant:orders")
+        Defdo.Tenant.Boundary.PubSub.subscribe(MyApp.PubSub, "tenant:orders")
         {:ok, %{}}
       end
   """
@@ -200,7 +200,7 @@ defmodule Defdo.Tenant.PubSub do
   Call from your `c:GenServer.handle_info/2`:
 
       def handle_info({:tenant_event, envelope}, state) do
-        Defdo.Tenant.PubSub.handle_message(envelope, fn payload ->
+        Defdo.Tenant.Boundary.PubSub.handle_message(envelope, fn payload ->
           process_order(payload)
         end)
         {:noreply, state}
@@ -248,7 +248,7 @@ defmodule Defdo.Tenant.PubSub do
       Config.raising?() ->
         raise ArgumentError,
               "PubSub event #{inspect(event)} has no tenant context in envelope. " <>
-                "Use Defdo.Tenant.PubSub.broadcast/4 to attach context."
+                "Use Defdo.Tenant.Boundary.PubSub.broadcast/4 to attach context."
 
       Config.warning?() ->
         require Logger

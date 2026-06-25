@@ -32,7 +32,7 @@ defmodule Defdo.Tenant.Boundary.MixProject do
 
   defp deps do
     [
-      {:defdo_tenant, "~> 0.8.6", organization: @organization},
+      {:defdo_tenant, "~> 0.8.8", organization: @organization},
       {:oban, "~> 2.17"},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
@@ -44,10 +44,13 @@ defmodule Defdo.Tenant.Boundary.MixProject do
       main: "readme",
       extras: ["README.md", "CHANGELOG.md"],
       groups_for_modules: [
-        Oban: ~r/^Defdo\.Tenant\.(Oban|Worker)$/,
-        PubSub: ~r/^Defdo\.Tenant\.PubSub/,
-        GenServer: ~r/^Defdo\.Tenant\.GenServer/,
-        Webhook: ~r/^Defdo\.Tenant\.Webhook/
+        Task: ~r/^Defdo\.Tenant\.Boundary\.Task$/,
+        Oban: ~r/^Defdo\.Tenant\.Boundary\.(Oban|Worker)$/,
+        PubSub: ~r/^Defdo\.Tenant\.Boundary\.PubSub/,
+        GenServer: ~r/^Defdo\.Tenant\.Boundary\.GenServer/,
+        Webhook: ~r/^Defdo\.Tenant\.Boundary\.Webhook/,
+        Cache: ~r/^Defdo\.Tenant\.Boundary\.Cache/,
+        Storage: ~r/^Defdo\.Tenant\.Boundary\.Storage/
       ],
       source_url_pattern: "#{@source_url}/blob/main/%{path}#L%{line}"
     ]
@@ -56,9 +59,9 @@ defmodule Defdo.Tenant.Boundary.MixProject do
   defp package do
     [
       organization: @organization,
-      files: ~w(lib .formatter.exs mix.exs README.md CHANGELOG.md),
+      files: ~w(lib .formatter.exs mix.exs README.md CHANGELOG.md VERSION AGENTS.md),
       description:
-        "Cross-process tenant boundary wrappers for the Defdo ecosystem — Oban, GenServer, PubSub, Webhook.",
+        "Cross-process tenant boundary wrappers for the Defdo ecosystem — Task, Oban, Worker, GenServer, PubSub, Webhook, Cache, Storage.",
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url}
     ]

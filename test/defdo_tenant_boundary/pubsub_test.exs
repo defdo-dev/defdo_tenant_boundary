@@ -2,8 +2,8 @@ defmodule DefdoTenantBoundary.PubSubTest do
   use ExUnit.Case, async: true
 
   alias Defdo.Tenant
+  alias Defdo.Tenant.Boundary.PubSub
   alias Defdo.Tenant.Context
-  alias Defdo.Tenant.PubSub
 
   # Test double for Phoenix.PubSub
   defmodule TestPubSub do

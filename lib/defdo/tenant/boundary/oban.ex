@@ -1,4 +1,4 @@
-defmodule Defdo.Tenant.Oban do
+defmodule Defdo.Tenant.Boundary.Oban do
   @moduledoc """
   Tenant-safe Oban job insertion.
 
@@ -13,23 +13,23 @@ defmodule Defdo.Tenant.Oban do
 
   ## Solution
 
-  `Defdo.Tenant.Oban` captures the current `Defdo.Tenant.Context` and serializes
+  `Defdo.Tenant.Boundary.Oban` captures the current `Defdo.Tenant.Context` and serializes
   it into the job's `meta` map (key `"defdo_tenant_context"`). On execution,
-  `Defdo.Tenant.Worker` restores it before the business callback.
+  `Defdo.Tenant.Boundary.Worker` restores it before the business callback.
 
   ## Usage
 
       # Build a changeset (same API as Oban.Job.new/2):
-      changeset = Defdo.Tenant.Oban.new(%{user_id: 42}, worker: MyWorker)
+      changeset = Defdo.Tenant.Boundary.Oban.new(%{user_id: 42}, worker: MyWorker)
 
       # Insert a job with context auto-attached:
-      {:ok, job} = Defdo.Tenant.Oban.insert(MyWorker, %{user_id: 42})
+      {:ok, job} = Defdo.Tenant.Boundary.Oban.insert(MyWorker, %{user_id: 42})
 
       # Insert with custom options:
-      {:ok, job} = Defdo.Tenant.Oban.insert(MyWorker, %{user_id: 42}, queue: :critical)
+      {:ok, job} = Defdo.Tenant.Boundary.Oban.insert(MyWorker, %{user_id: 42}, queue: :critical)
 
       # Attach context to an existing job/changeset:
-      changeset = Defdo.Tenant.Oban.attach_tenant(existing_changeset)
+      changeset = Defdo.Tenant.Boundary.Oban.attach_tenant(existing_changeset)
 
   ## Enforcement modes
 
@@ -51,7 +51,7 @@ defmodule Defdo.Tenant.Oban do
 
   ## See also
 
-  * `Defdo.Tenant.Worker` — restores context before job execution
+  * `Defdo.Tenant.Boundary.Worker` — restores context before job execution
   * `Defdo.Tenant.Config` — enforcement modes
   * `Defdo.Tenant.Boundary.Task` — same pattern for `Task.async`
   """
@@ -80,11 +80,7 @@ defmodule Defdo.Tenant.Oban do
   """
   @spec insert(module(), map(), keyword()) :: {:ok, Oban.Job.t()} | {:error, term()}
   def insert(worker, args, opts \\ []) when is_atom(worker) and is_map(args) and is_list(opts) do
-    merged = Keyword.put(opts, :worker, worker) |> Keyword.put_new(:args, args)
-
-    args
-    |> Oban.Job.new(merged)
-    |> attach_tenant()
+    new(args, Keyword.put(opts, :worker, worker))
     |> Oban.insert()
   end
 
@@ -124,12 +120,15 @@ defmodule Defdo.Tenant.Oban do
         cond do
           Config.raising?() ->
             raise ArgumentError,
-                  "Defdo.Tenant.Oban job #{inspect(job.worker)} has no tenant context. " <>
+                  "Defdo.Tenant.Boundary.Oban job #{inspect(job.worker)} has no tenant context. " <>
                     "Set a context with Defdo.Tenant.with_tenant/2 or use a global/system-edge context."
 
           Config.warning?() ->
             require Logger
-            Logger.warning("Defdo.Tenant.Oban job #{inspect(job.worker)} has no tenant context")
+
+            Logger.warning(
+              "Defdo.Tenant.Boundary.Oban job #{inspect(job.worker)} has no tenant context"
+            )
 
           true ->
             :ok

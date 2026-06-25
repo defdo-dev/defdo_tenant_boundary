@@ -2,11 +2,11 @@ defmodule DefdoTenantBoundary.WorkerTest do
   use ExUnit.Case, async: true
 
   alias Defdo.Tenant
+  alias Defdo.Tenant.Boundary.Worker
   alias Defdo.Tenant.Context
-  alias Defdo.Tenant.Worker
 
   defmodule ScopedWorker do
-    use Defdo.Tenant.Worker, queue: :default
+    use Defdo.Tenant.Boundary.Worker, queue: :default
 
     def perform_with_tenant(job) do
       send(:test_process, {:tenant_id, Tenant.current_tenant_id()})

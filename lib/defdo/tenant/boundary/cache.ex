@@ -1,4 +1,4 @@
-defmodule Defdo.Tenant.Cache do
+defmodule Defdo.Tenant.Boundary.Cache do
   @moduledoc """
   Tenant-aware cache key builder.
 
@@ -7,18 +7,18 @@ defmodule Defdo.Tenant.Cache do
   A shared cache (ETS, Redis, etc.) can leak data across tenants if keys
   are not namespaced. Prefix every key with the current tenant ID:
 
-      key = Defdo.Tenant.Cache.key("user:42")
+      key = Defdo.Tenant.Boundary.Cache.key("user:42")
       # => "tenant-abc:user:42"
 
   Global keys (shared across tenants) use `global_key/1`:
 
-      key = Defdo.Tenant.Cache.global_key("rate_limit:1.2.3.4")
+      key = Defdo.Tenant.Boundary.Cache.global_key("rate_limit:1.2.3.4")
       # => "global:rate_limit:1.2.3.4"
 
   ## Usage
 
       Defdo.Tenant.with_tenant("tenant-abc", fn ->
-        key = Defdo.Tenant.Cache.key("user:42")
+        key = Defdo.Tenant.Boundary.Cache.key("user:42")
         Cachex.get(:my_cache, key)
       end)
 
@@ -28,15 +28,15 @@ defmodule Defdo.Tenant.Cache do
 
   | Mode | Missing-context behaviour |
   |---|---|
-  | `:observe` (default) | Emit telemetry; prefix with `"global:"` |
-  | `:warn` | Telemetry + log warning; prefix with `"global:"` |
+  | `:observe` (default) | Emit telemetry; prefix with `"unknown:"` |
+  | `:warn` | Telemetry + log warning; prefix with `"unknown:"` |
   | `:test_enforce` | Raise (test/CI only) |
   | `:strict` | Raise |
 
   ## See also
 
   * `Defdo.Tenant.Config` — enforcement modes
-  * `Defdo.Tenant.Storage` — same pattern for object storage paths
+  * `Defdo.Tenant.Boundary.Storage` — same pattern for object storage paths
   """
 
   alias Defdo.Tenant.Config
@@ -53,7 +53,7 @@ defmodule Defdo.Tenant.Cache do
     case Context.tenant_id() do
       nil ->
         on_missing_context(suffix)
-        "global:" <> suffix
+        "unknown:" <> suffix
 
       tenant_id when is_binary(tenant_id) ->
         tenant_id <> ":" <> suffix
@@ -80,12 +80,12 @@ defmodule Defdo.Tenant.Cache do
     cond do
       Config.raising?() ->
         raise ArgumentError,
-              "Defdo.Tenant.Cache.key/1 called without tenant context. " <>
+              "Defdo.Tenant.Boundary.Cache.key/1 called without tenant context. " <>
                 "Set a context with Defdo.Tenant.with_tenant/2 or use global_key/1."
 
       Config.warning?() ->
         require Logger
-        Logger.warning("Cache.key/1 without tenant context — prefixing with global:")
+        Logger.warning("Cache.key/1 without tenant context — prefixing with unknown:")
 
       true ->
         :ok

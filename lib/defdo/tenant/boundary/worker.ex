@@ -1,4 +1,4 @@
-defmodule Defdo.Tenant.Worker do
+defmodule Defdo.Tenant.Boundary.Worker do
   @moduledoc """
   Tenant-safe Oban worker behaviour.
 
@@ -6,11 +6,11 @@ defmodule Defdo.Tenant.Worker do
 
   ## Usage
 
-  Replace `use Oban.Worker` with `use Defdo.Tenant.Worker` and implement
+  Replace `use Oban.Worker` with `use Defdo.Tenant.Boundary.Worker` and implement
   `perform_with_tenant/1` instead of `perform/1`:
 
       defmodule MyApp.Workers.SyncTenant do
-        use Defdo.Tenant.Worker, queue: :default, max_attempts: 3
+        use Defdo.Tenant.Boundary.Worker, queue: :default, max_attempts: 3
 
         def perform_with_tenant(%Oban.Job{args: args}) do
           # tenant context is already restored here
@@ -24,7 +24,7 @@ defmodule Defdo.Tenant.Worker do
   2. Before your `perform_with_tenant/1` runs, context is restored from
      `job.meta["defdo_tenant_context"]` via `restore_context_from_job/1`.
   3. After the callback returns (even on exception), context is cleared.
-  4. Jobs inserted via `Defdo.Tenant.Oban.insert/3` or `Defdo.Tenant.Oban.new/2`
+  4. Jobs inserted via `Defdo.Tenant.Boundary.Oban.insert/3` or `Defdo.Tenant.Boundary.Oban.new/2`
      automatically carry context in `meta`.
 
   ## Enforcement modes
@@ -51,13 +51,13 @@ defmodule Defdo.Tenant.Worker do
   existing workers without adopting the macro:
 
       def perform(job) do
-        Defdo.Tenant.Worker.restore_context_from_job(job)
+        Defdo.Tenant.Boundary.Worker.restore_context_from_job(job)
         do_work(job)
       end
 
   ## See also
 
-  * `Defdo.Tenant.Oban` — captures context at insertion time
+  * `Defdo.Tenant.Boundary.Oban` — captures context at insertion time
   * `Defdo.Tenant.Config` — enforcement modes
   * `Defdo.Tenant.Boundary.Task` — same pattern for `Task.async`
   """
@@ -68,17 +68,18 @@ defmodule Defdo.Tenant.Worker do
   @context_meta_key "defdo_tenant_context"
 
   defmacro __using__(opts) do
+    context_mod = Defdo.Tenant.Context
+    worker_mod = Defdo.Tenant.Boundary.Worker
+
     quote do
       use Oban.Worker, unquote(opts)
 
       @impl true
       def perform(job) do
-        Defdo.Tenant.Worker.restore_context_from_job(job)
+        unquote(worker_mod).restore_context_from_job(job)
         perform_with_tenant(job)
-      rescue
-        e -> reraise e, __STACKTRACE__
       after
-        Defdo.Tenant.Context.clear()
+        unquote(context_mod).clear()
       end
 
       defoverridable perform: 1
@@ -124,7 +125,7 @@ defmodule Defdo.Tenant.Worker do
           Config.raising?() ->
             raise ArgumentError,
                   "Oban job #{inspect(worker)} has no tenant context in meta. " <>
-                    "Use Defdo.Tenant.Oban.new/2 or Defdo.Tenant.Oban.insert/2 to attach context."
+                    "Use Defdo.Tenant.Boundary.Oban.new/2 or Defdo.Tenant.Boundary.Oban.insert/2 to attach context."
 
           Config.warning?() ->
             require Logger

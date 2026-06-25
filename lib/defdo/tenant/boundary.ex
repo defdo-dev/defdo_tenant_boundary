@@ -12,13 +12,14 @@ defmodule Defdo.Tenant.Boundary do
 
   ## Included wrappers
 
-    * `Defdo.Tenant.Oban` — tenant-safe job insertion (captures context into job meta)
-    * `Defdo.Tenant.Worker` — tenant-safe worker behaviour (restores context before callback)
-    * `Defdo.Tenant.GenServer` — capture/restore helpers for GenServer callbacks
-    * `Defdo.Tenant.PubSub` — tenant-aware PubSub envelope (broadcast, subscribe, handle)
-    * `Defdo.Tenant.Webhook` — two-phase trusted-edge → tenant-runtime
-    * `Defdo.Tenant.Cache` — tenant-scoped cache key builder
-    * `Defdo.Tenant.Storage` — tenant-scoped object storage path builder
+    * `Defdo.Tenant.Boundary.Task` — tenant-safe `Task.async` (captures context, restores in child process)
+    * `Defdo.Tenant.Boundary.Oban` — tenant-safe job insertion (captures context into job meta)
+    * `Defdo.Tenant.Boundary.Worker` — tenant-safe worker behaviour (restores context before callback)
+    * `Defdo.Tenant.Boundary.GenServer` — capture/restore helpers for GenServer callbacks
+    * `Defdo.Tenant.Boundary.PubSub` — tenant-aware PubSub envelope (broadcast, subscribe, handle)
+    * `Defdo.Tenant.Boundary.Webhook` — two-phase trusted-edge → tenant-runtime
+    * `Defdo.Tenant.Boundary.Cache` — tenant-scoped cache key builder
+    * `Defdo.Tenant.Boundary.Storage` — tenant-scoped object storage path builder
 
   ## Enforcement modes
 

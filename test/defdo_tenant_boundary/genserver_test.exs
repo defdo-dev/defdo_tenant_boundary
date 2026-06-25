@@ -2,8 +2,8 @@ defmodule DefdoTenantBoundary.GenServerTest do
   use ExUnit.Case, async: false
 
   alias Defdo.Tenant
+  alias Defdo.Tenant.Boundary.GenServer, as: TGS
   alias Defdo.Tenant.Context
-  alias Defdo.Tenant.GenServer, as: TGS
 
   defmodule TenantCache do
     use GenServer
@@ -52,6 +52,43 @@ defmodule DefdoTenantBoundary.GenServerTest do
 
   setup do
     Process.register(self(), :test_process)
+
+    # Attach telemetry handlers to verify events in tests
+    test_pid = self()
+
+    :telemetry.attach(
+      :genserver_captured,
+      [:defdo, :tenant, :genserver, :context_captured],
+      fn _event, measures, meta, _config ->
+        send(test_pid, {:telemetry, :context_captured, measures, meta})
+      end,
+      nil
+    )
+
+    :telemetry.attach(
+      :genserver_missing,
+      [:defdo, :tenant, :genserver, :context_missing],
+      fn _event, measures, meta, _config ->
+        send(test_pid, {:telemetry, :context_missing, measures, meta})
+      end,
+      nil
+    )
+
+    :telemetry.attach(
+      :genserver_restored,
+      [:defdo, :tenant, :context, :restored],
+      fn _event, measures, meta, _config ->
+        send(test_pid, {:telemetry, :context_restored, measures, meta})
+      end,
+      nil
+    )
+
+    on_exit(fn ->
+      :telemetry.detach(:genserver_captured)
+      :telemetry.detach(:genserver_missing)
+      :telemetry.detach(:genserver_restored)
+    end)
+
     :ok
   end
 
@@ -59,9 +96,17 @@ defmodule DefdoTenantBoundary.GenServerTest do
     test "restores tenant context in handle_call" do
       {:ok, pid} = TenantCache.start_link("tenant-gs-123")
 
+      # Verify capture_init_context emitted telemetry
+      assert_received {:telemetry, :context_captured, %{count: 1},
+                       %{boundary: :genserver, scope: :tenant}}
+
       {:ok, tid} = GenServer.call(pid, {:put, :a, 1})
 
       assert tid == "tenant-gs-123"
+
+      # Verify restore_context emitted telemetry
+      assert_received {:telemetry, :context_restored, %{count: 1},
+                       %{boundary: :genserver, scope: :tenant}}
     end
 
     test "restores tenant context in handle_cast" do

@@ -1,4 +1,4 @@
-# Defdo.Tenant.Boundary v0.1.0
+# Defdo.Tenant.Boundary v0.2.0
 
 Cross-process tenant boundary wrappers for the Defdo ecosystem.
 
@@ -16,25 +16,42 @@ end
 
 ## API Reference
 
+### Task
+
+```elixir
+# Spawn a tenant-safe task — context captured now, restored in child process
+task = Defdo.Tenant.Boundary.Task.async(fn -> do_tenant_work() end)
+result = Defdo.Tenant.Boundary.Task.await(task)
+
+# MFA form
+task = Defdo.Tenant.Boundary.Task.async(MyModule, :my_function, [arg1, arg2])
+
+# Under a supervisor
+task = Defdo.Tenant.Boundary.Task.supervised(MySupervisor, fn -> do_work() end)
+
+# Await multiple tasks
+results = Defdo.Tenant.Boundary.Task.await_many([task1, task2])
+```
+
 ### Oban
 
 ```elixir
 # Insert with tenant context auto-attached
-{:ok, job} = Defdo.Tenant.Oban.insert(MyWorker, %{user_id: 42})
-{:ok, job} = Defdo.Tenant.Oban.insert(MyWorker, %{user_id: 42}, queue: :critical)
+{:ok, job} = Defdo.Tenant.Boundary.Oban.insert(MyWorker, %{user_id: 42})
+{:ok, job} = Defdo.Tenant.Boundary.Oban.insert(MyWorker, %{user_id: 42}, queue: :critical)
 
 # Build changeset (same API as Oban.Job.new/2)
-changeset = Defdo.Tenant.Oban.new(%{user_id: 42}, worker: MyWorker)
+changeset = Defdo.Tenant.Boundary.Oban.new(%{user_id: 42}, worker: MyWorker)
 
 # Attach context to an existing changeset
-changeset = Defdo.Tenant.Oban.attach_tenant(existing_changeset)
+changeset = Defdo.Tenant.Boundary.Oban.attach_tenant(existing_changeset)
 ```
 
 ### Worker
 
 ```elixir
 defmodule MyApp.Workers.SyncTenant do
-  use Defdo.Tenant.Worker, queue: :default, max_attempts: 3
+  use Defdo.Tenant.Boundary.Worker, queue: :default, max_attempts: 3
 
   def perform_with_tenant(%Oban.Job{args: args}) do
     # tenant context already restored here
@@ -44,7 +61,7 @@ end
 
 # Standalone: restore context without the macro
 def perform(job) do
-  Defdo.Tenant.Worker.restore_context_from_job(job)
+  Defdo.Tenant.Boundary.Worker.restore_context_from_job(job)
   do_work(job)
 end
 ```
@@ -57,13 +74,13 @@ defmodule MyApp.TenantCache do
 
   @impl true
   def init(tenant_id) do
-    Defdo.Tenant.GenServer.capture_init_context()
+    Defdo.Tenant.Boundary.GenServer.capture_init_context()
     {:ok, %{}}
   end
 
   @impl true
   def handle_call(:get_state, _from, state) do
-    Defdo.Tenant.GenServer.restore_context()
+    Defdo.Tenant.Boundary.GenServer.restore_context()
     {:reply, state, state}
   end
 end
@@ -73,17 +90,17 @@ end
 
 ```elixir
 # Broadcast — captures context automatically
-Defdo.Tenant.PubSub.broadcast(MyApp.PubSub, "tenant:orders", "order:created", %{order_id: 123})
+Defdo.Tenant.Boundary.PubSub.broadcast(MyApp.PubSub, "tenant:orders", "order:created", %{order_id: 123})
 
 # Build envelope without broadcasting (for other transports)
-envelope = Defdo.Tenant.PubSub.build_envelope("order:created", %{order_id: 123})
+envelope = Defdo.Tenant.Boundary.PubSub.build_envelope("order:created", %{order_id: 123})
 
 # Subscribe
-Defdo.Tenant.PubSub.subscribe(MyApp.PubSub, "tenant:orders")
+Defdo.Tenant.Boundary.PubSub.subscribe(MyApp.PubSub, "tenant:orders")
 
 # Handle — restores context from envelope
 def handle_info({:tenant_event, envelope}, state) do
-  Defdo.Tenant.PubSub.handle_message(envelope, fn payload ->
+  Defdo.Tenant.Boundary.PubSub.handle_message(envelope, fn payload ->
     process_order(payload)
   end)
   {:noreply, state}
@@ -94,9 +111,9 @@ end
 
 ```elixir
 # Resolve tenant from trusted edge data
-case Defdo.Tenant.Webhook.resolve(%{host: "acme.example.com"}, resolver: :host) do
+case Defdo.Tenant.Boundary.Webhook.resolve(%{host: "acme.example.com"}, resolver: :host) do
   {:ok, tenant} ->
-    Defdo.Tenant.Webhook.execute(tenant, fn ->
+    Defdo.Tenant.Boundary.Webhook.execute(tenant, fn ->
       process_webhook(payload)
     end)
 
@@ -105,7 +122,7 @@ case Defdo.Tenant.Webhook.resolve(%{host: "acme.example.com"}, resolver: :host) 
 end
 
 # Custom resolver
-Defdo.Tenant.Webhook.resolve(
+Defdo.Tenant.Boundary.Webhook.resolve(
   %{credential_id: "key-123"},
   resolver: {MyApp.Resolver, :by_credential, []}
 )
@@ -116,12 +133,12 @@ Defdo.Tenant.Webhook.resolve(
 ```elixir
 # Tenant-scoped key
 Defdo.Tenant.with_tenant("tenant-abc", fn ->
-  key = Defdo.Tenant.Cache.key("user:42")
+  key = Defdo.Tenant.Boundary.Cache.key("user:42")
   # => "tenant-abc:user:42"
 end)
 
 # Global key (no context needed)
-Defdo.Tenant.Cache.global_key("rate_limit:1.2.3.4")
+Defdo.Tenant.Boundary.Cache.global_key("rate_limit:1.2.3.4")
 # => "global:rate_limit:1.2.3.4"
 ```
 
@@ -130,12 +147,12 @@ Defdo.Tenant.Cache.global_key("rate_limit:1.2.3.4")
 ```elixir
 # Tenant-scoped path
 Defdo.Tenant.with_tenant("tenant-xyz", fn ->
-  path = Defdo.Tenant.Storage.path("uploads/avatar.jpg")
+  path = Defdo.Tenant.Boundary.Storage.path("uploads/avatar.jpg")
   # => "tenants/tenant-xyz/uploads/avatar.jpg"
 end)
 
 # Global path (no context needed)
-Defdo.Tenant.Storage.global_path("public/logo.png")
+Defdo.Tenant.Boundary.Storage.global_path("public/logo.png")
 # => "global/public/logo.png"
 ```
 
@@ -154,10 +171,14 @@ All wrappers respect `Defdo.Tenant.Config` enforcement:
 
 | Event | Source |
 |---|---|
+| `[:defdo, :tenant, :context, :restored]` | Task, Worker, GenServer, PubSub, Webhook |
+| `[:defdo, :tenant, :context, :missing]` | Task, Worker, GenServer, PubSub |
 | `[:defdo, :tenant, :oban, :context_captured]` | Oban insert |
 | `[:defdo, :tenant, :oban, :context_missing]` | Oban insert (no context) |
 | `[:defdo, :tenant, :genserver, :context_captured]` | GenServer init |
 | `[:defdo, :tenant, :genserver, :context_missing]` | GenServer init (no context) |
+| `[:defdo, :tenant, :context, :restored]` | Context restored (all wrappers) |
+| `[:defdo, :tenant, :context, :missing]` | Context absent (all wrappers) |
 | `[:defdo, :tenant, :pubsub, :published]` | PubSub broadcast |
 | `[:defdo, :tenant, :pubsub, :context_missing]` | PubSub broadcast (no context) |
 | `[:defdo, :tenant, :webhook, :resolved]` | Webhook tenant found |

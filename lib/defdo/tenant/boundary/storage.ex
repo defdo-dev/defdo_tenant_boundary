@@ -1,4 +1,4 @@
-defmodule Defdo.Tenant.Storage do
+defmodule Defdo.Tenant.Boundary.Storage do
   @moduledoc """
   Tenant-aware object storage path builder.
 
@@ -12,14 +12,14 @@ defmodule Defdo.Tenant.Storage do
 
   ## Solution
 
-  `Defdo.Tenant.Storage.path/2` prefixes every path with the tenant ID:
+  `Defdo.Tenant.Boundary.Storage.path/2` prefixes every path with the tenant ID:
 
-      Defdo.Tenant.Storage.path("uploads/avatar.jpg")
+      Defdo.Tenant.Boundary.Storage.path("uploads/avatar.jpg")
       # => "tenants/tenant-123/uploads/avatar.jpg"
 
   Global paths use `global_path/1`:
 
-      Defdo.Tenant.Storage.global_path("public/logo.png")
+      Defdo.Tenant.Boundary.Storage.global_path("public/logo.png")
       # => "global/public/logo.png"
 
   In `:strict` mode, `path/2` raises when no tenant context is set.
@@ -28,7 +28,7 @@ defmodule Defdo.Tenant.Storage do
 
       # In a tenant-scoped context:
       Defdo.Tenant.with_tenant("tenant-abc", fn ->
-        path = Defdo.Tenant.Storage.path("uploads/avatar.jpg")
+        path = Defdo.Tenant.Boundary.Storage.path("uploads/avatar.jpg")
         # path == "tenants/tenant-abc/uploads/avatar.jpg"
         S3.put_object(bucket, path, file)
       end)
@@ -39,8 +39,8 @@ defmodule Defdo.Tenant.Storage do
 
   | Mode | Missing-context behaviour |
   |---|---|
-  | `:observe` (default) | Emit telemetry; prefix with `"global/"` |
-  | `:warn` | Telemetry + log warning; prefix with `"global/"` |
+  | `:observe` (default) | Emit telemetry; prefix with `"unknown/"` |
+  | `:warn` | Telemetry + log warning; prefix with `"unknown/"` |
   | `:test_enforce` | Raise (test/CI only) |
   | `:strict` | Raise |
 
@@ -53,7 +53,7 @@ defmodule Defdo.Tenant.Storage do
   ## See also
 
   * `Defdo.Tenant.Config` — enforcement modes
-  * `Defdo.Tenant.Cache` — same pattern for cache keys
+  * `Defdo.Tenant.Boundary.Cache` — same pattern for cache keys
   """
 
   alias Defdo.Tenant.Config
@@ -68,7 +68,7 @@ defmodule Defdo.Tenant.Storage do
   ## Examples
 
       Defdo.Tenant.with_tenant("t-1", fn ->
-        path = Defdo.Tenant.Storage.path("uploads/avatar.jpg")
+        path = Defdo.Tenant.Boundary.Storage.path("uploads/avatar.jpg")
         # path == "tenants/t-1/uploads/avatar.jpg"
       end)
   """
@@ -77,7 +77,7 @@ defmodule Defdo.Tenant.Storage do
     case Context.tenant_id() do
       nil ->
         on_missing_context(suffix)
-        "global/" <> suffix
+        "unknown/" <> suffix
 
       tenant_id when is_binary(tenant_id) ->
         "tenants/" <> tenant_id <> "/" <> suffix
@@ -106,14 +106,14 @@ defmodule Defdo.Tenant.Storage do
     cond do
       Config.raising?() ->
         raise ArgumentError,
-              "Defdo.Tenant.Storage.path/1 called without tenant context. " <>
+              "Defdo.Tenant.Boundary.Storage.path/1 called without tenant context. " <>
                 "Set a context with Defdo.Tenant.with_tenant/2 or use global_path/1."
 
       Config.warning?() ->
         require Logger
 
         Logger.warning(
-          "Defdo.Tenant.Storage.path/1 called without tenant context — prefixing with global/"
+          "Defdo.Tenant.Boundary.Storage.path/1 called without tenant context — prefixing with unknown/"
         )
 
       true ->

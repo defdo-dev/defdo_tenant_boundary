@@ -1,4 +1,4 @@
-defmodule Defdo.Tenant.Webhook do
+defmodule Defdo.Tenant.Boundary.Webhook do
   @moduledoc """
   Tenant-safe webhook processing — two-phase trusted-edge resolution.
 
@@ -21,13 +21,13 @@ defmodule Defdo.Tenant.Webhook do
   ## Usage
 
       # Phase 1: resolve tenant from trusted edge data
-      tenant = Defdo.Tenant.Webhook.resolve(
+      tenant = Defdo.Tenant.Boundary.Webhook.resolve(
         %{host: "my-tenant.example.com"},
         resolver: :host
       )
 
       # Phase 2: execute business logic in tenant context
-      Defdo.Tenant.Webhook.execute(tenant, fn ->
+      Defdo.Tenant.Boundary.Webhook.execute(tenant, fn ->
         # Repo queries are scoped to the resolved tenant
         process_webhook_payload(payload)
       end)
@@ -44,7 +44,7 @@ defmodule Defdo.Tenant.Webhook do
 
       resolver = {MyApp.Resolver, :by_client_id, []}
 
-      Defdo.Tenant.Webhook.resolve(
+      Defdo.Tenant.Boundary.Webhook.resolve(
         %{client_id: "stripe-acc-123"},
         resolver: resolver
       )
@@ -106,13 +106,13 @@ defmodule Defdo.Tenant.Webhook do
   ## Examples
 
       # Resolve by host (domain + allowed_domains + free_fqdn)
-      Defdo.Tenant.Webhook.resolve(%{host: "acme.example.com"}, resolver: :host)
+      Defdo.Tenant.Boundary.Webhook.resolve(%{host: "acme.example.com"}, resolver: :host)
 
       # Resolve by domain only
-      Defdo.Tenant.Webhook.resolve(%{domain: "acme.example.com"}, resolver: :domain)
+      Defdo.Tenant.Boundary.Webhook.resolve(%{domain: "acme.example.com"}, resolver: :domain)
 
       # Custom resolver
-      Defdo.Tenant.Webhook.resolve(
+      Defdo.Tenant.Boundary.Webhook.resolve(
         %{credential_id: "key-123"},
         resolver: {MyApp.Resolver, :by_credential, []}
       )
@@ -133,9 +133,9 @@ defmodule Defdo.Tenant.Webhook do
 
   ## Example
 
-      case Defdo.Tenant.Webhook.resolve(payload, resolver: :host) do
+      case Defdo.Tenant.Boundary.Webhook.resolve(payload, resolver: :host) do
         {:ok, tenant} ->
-          Defdo.Tenant.Webhook.execute(tenant, fn ->
+          Defdo.Tenant.Boundary.Webhook.execute(tenant, fn ->
             process_webhook(payload)
           end)
 
@@ -219,11 +219,11 @@ defmodule Defdo.Tenant.Webhook do
     cond do
       Config.raising?() ->
         raise ArgumentError,
-              "Defdo.Tenant.Webhook: unable to resolve tenant using resolver #{inspect(resolver)}"
+              "Defdo.Tenant.Boundary.Webhook: unable to resolve tenant using resolver #{inspect(resolver)}"
 
       Config.warning?() ->
         Logger.warning(
-          "Defdo.Tenant.Webhook: unable to resolve tenant using resolver #{inspect(resolver)}"
+          "Defdo.Tenant.Boundary.Webhook: unable to resolve tenant using resolver #{inspect(resolver)}"
         )
 
       true ->
@@ -275,7 +275,7 @@ defmodule Defdo.Tenant.Webhook do
 
   defp raise_missing_repo do
     raise ArgumentError,
-          "Defdo.Tenant.Webhook: no repo configured. " <>
+          "Defdo.Tenant.Boundary.Webhook: no repo configured. " <>
             "Set `config :defdo_tenant, repo: MyApp.Repo`."
   end
 end
