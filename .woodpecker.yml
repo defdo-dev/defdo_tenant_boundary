@@ -6,10 +6,13 @@
 #   manual              → CI run or publish
 #   cron                → nightly CI
 #
-# Secrets (configure in Woodpecker):
-#   hex_api_key       — Hex.pm API write key (not available on pull_request)
+# Global secrets (configured in Woodpecker org settings):
+#   hex_api_key       — Hex.pm API write key
 #   hex_org_name      — Hex organization name ("defdo")
 #   hex_org_token     — Hex organization read token
+#
+# Woodpecker auto-injects global secrets as env vars with their exact names.
+# We do NOT use environment: from_secret: to avoid clobbering them with empty.
 
 when:
   - event: [push, pull_request]
@@ -27,21 +30,47 @@ steps:
     image: elixir:1.19.5
     when:
       event: [push, pull_request, cron]
+    environment:
+      HEX_ORG_TOKEN:
+        from_secret: hex_org_token
     commands:
-      - mix do local.hex --force, local.rebar --force
-      - mix deps.get
-      - mix format --check-formatted
-      - mix compile --warnings-as-errors
+      - |
+        set -e
+        HEX_ORG_NAME="defdo"
+        export HEX_ORG_NAME HEX_ORG_TOKEN
+
+        mix do local.hex --force, local.rebar --force
+
+        if [ -n "$HEX_ORG_TOKEN" ]; then
+          mix hex.organization auth "$HEX_ORG_NAME" --key "$HEX_ORG_TOKEN"
+        fi
+
+        mix deps.get
+        mix format --check-formatted
+        mix compile --warnings-as-errors
 
   - name: test
     image: elixir:1.19.5
     when:
       event: [push, pull_request, cron]
+    environment:
+      HEX_ORG_TOKEN:
+        from_secret: hex_org_token
     commands:
-      - mix do local.hex --force, local.rebar --force
-      - mix deps.get
-      - mix compile --warnings-as-errors
-      - mix test
+      - |
+        set -e
+        HEX_ORG_NAME="defdo"
+        export HEX_ORG_NAME HEX_ORG_TOKEN
+
+        mix do local.hex --force, local.rebar --force
+
+        if [ -n "$HEX_ORG_TOKEN" ]; then
+          mix hex.organization auth "$HEX_ORG_NAME" --key "$HEX_ORG_TOKEN"
+        fi
+
+        mix deps.get
+        mix compile --warnings-as-errors
+        mix test
 
   # ═══════════════════════════════════════════════════════════════════════
   #  RELEASE — tag events
@@ -52,22 +81,32 @@ steps:
     when:
       event: tag
     environment:
-      HEX_ORG_NAME:
-        from_secret: hex_org_name
+      HEX_API_KEY:
+        from_secret: hex_api_key
       HEX_ORG_TOKEN:
         from_secret: hex_org_token
     commands:
-      - mix do local.hex --force, local.rebar --force
       - |
-        if [ -n "$$HEX_ORG_NAME" ] && [ -n "$$HEX_ORG_TOKEN" ]; then
-          mix hex.organization auth "$$HEX_ORG_NAME" --key "$$HEX_ORG_TOKEN"
+        set -e
+        # hex_org_name is "defdo" — not sensitive, hardcode to avoid secret injection issues
+        HEX_ORG_NAME="defdo"
+        export HEX_API_KEY HEX_ORG_NAME HEX_ORG_TOKEN
+
+        mix do local.hex --force, local.rebar --force
+
+        if [ -n "$HEX_ORG_TOKEN" ]; then
+          mix hex.organization auth "$HEX_ORG_NAME" --key "$HEX_ORG_TOKEN"
+        else
+          echo "ERROR: HEX_ORG_TOKEN is empty — Woodpecker did not inject the secret"
+          exit 1
         fi
-      - mix deps.get
-      - mix format --check-formatted
-      - mix compile --warnings-as-errors
-      - mix test
-      - MIX_ENV=dev mix deps.get
-      - MIX_ENV=dev mix hex.build
+
+        mix deps.get
+        mix format --check-formatted
+        mix compile --warnings-as-errors
+        mix test
+        MIX_ENV=dev mix deps.get
+        MIX_ENV=dev mix hex.build
 
   - name: hex-publish
     image: elixir:1.19.5
@@ -77,24 +116,29 @@ steps:
     environment:
       HEX_API_KEY:
         from_secret: hex_api_key
-      HEX_ORG_NAME:
-        from_secret: hex_org_name
       HEX_ORG_TOKEN:
         from_secret: hex_org_token
     commands:
-      - mix do local.hex --force, local.rebar --force
       - |
-        if [ -n "$$HEX_ORG_NAME" ] && [ -n "$$HEX_ORG_TOKEN" ]; then
-          mix hex.organization auth "$$HEX_ORG_NAME" --key "$$HEX_ORG_TOKEN"
+        set -e
+        HEX_ORG_NAME="defdo"
+        export HEX_API_KEY HEX_ORG_NAME HEX_ORG_TOKEN
+
+        mix do local.hex --force, local.rebar --force
+
+        if [ -n "$HEX_ORG_TOKEN" ]; then
+          mix hex.organization auth "$HEX_ORG_NAME" --key "$HEX_ORG_TOKEN"
         fi
-      - mix deps.get
-      - mix test
-      - |
-        if [ -z "$$HEX_API_KEY" ]; then
+
+        mix deps.get
+        mix test
+
+        if [ -z "$HEX_API_KEY" ]; then
           echo "ERROR: HEX_API_KEY is required to publish"
           exit 1
         fi
-      - mix hex.publish --yes
+
+        mix hex.publish --yes
 
   # ═══════════════════════════════════════════════════════════════════════
   #  MANUAL
@@ -105,12 +149,25 @@ steps:
     when:
       event: manual
       evaluate: 'CI_PIPELINE_TRIGGER_MESSAGE != "publish"'
+    environment:
+      HEX_ORG_TOKEN:
+        from_secret: hex_org_token
     commands:
-      - mix do local.hex --force, local.rebar --force
-      - mix deps.get
-      - mix format --check-formatted
-      - mix compile --warnings-as-errors
-      - mix test
+      - |
+        set -e
+        HEX_ORG_NAME="defdo"
+        export HEX_ORG_NAME HEX_ORG_TOKEN
+
+        mix do local.hex --force, local.rebar --force
+
+        if [ -n "$HEX_ORG_TOKEN" ]; then
+          mix hex.organization auth "$HEX_ORG_NAME" --key "$HEX_ORG_TOKEN"
+        fi
+
+        mix deps.get
+        mix format --check-formatted
+        mix compile --warnings-as-errors
+        mix test
 
   - name: manual-publish
     image: elixir:1.19.5
@@ -120,27 +177,32 @@ steps:
     environment:
       HEX_API_KEY:
         from_secret: hex_api_key
-      HEX_ORG_NAME:
-        from_secret: hex_org_name
       HEX_ORG_TOKEN:
         from_secret: hex_org_token
     commands:
-      - mix do local.hex --force, local.rebar --force
       - |
-        if [ -n "$$HEX_ORG_NAME" ] && [ -n "$$HEX_ORG_TOKEN" ]; then
-          mix hex.organization auth "$$HEX_ORG_NAME" --key "$$HEX_ORG_TOKEN"
+        set -e
+        HEX_ORG_NAME="defdo"
+        export HEX_API_KEY HEX_ORG_NAME HEX_ORG_TOKEN
+
+        mix do local.hex --force, local.rebar --force
+
+        if [ -n "$HEX_ORG_TOKEN" ]; then
+          mix hex.organization auth "$HEX_ORG_NAME" --key "$HEX_ORG_TOKEN"
         fi
-      - mix deps.get
-      - mix format --check-formatted
-      - mix compile --warnings-as-errors
-      - mix test
-      - MIX_ENV=dev mix hex.build
-      - |
-        if [ -z "$$HEX_API_KEY" ]; then
+
+        mix deps.get
+        mix format --check-formatted
+        mix compile --warnings-as-errors
+        mix test
+        MIX_ENV=dev mix hex.build
+
+        if [ -z "$HEX_API_KEY" ]; then
           echo "ERROR: HEX_API_KEY is required to publish"
           exit 1
         fi
-      - mix hex.publish --yes
+
+        mix hex.publish --yes
 
   # ═══════════════════════════════════════════════════════════════════════
   #  DEPLOY — woodpecker-cli deploy
@@ -153,24 +215,29 @@ steps:
     environment:
       HEX_API_KEY:
         from_secret: hex_api_key
-      HEX_ORG_NAME:
-        from_secret: hex_org_name
       HEX_ORG_TOKEN:
         from_secret: hex_org_token
     commands:
-      - mix do local.hex --force, local.rebar --force
       - |
-        if [ -n "$$HEX_ORG_NAME" ] && [ -n "$$HEX_ORG_TOKEN" ]; then
-          mix hex.organization auth "$$HEX_ORG_NAME" --key "$$HEX_ORG_TOKEN"
+        set -e
+        HEX_ORG_NAME="defdo"
+        export HEX_API_KEY HEX_ORG_NAME HEX_ORG_TOKEN
+
+        mix do local.hex --force, local.rebar --force
+
+        if [ -n "$HEX_ORG_TOKEN" ]; then
+          mix hex.organization auth "$HEX_ORG_NAME" --key "$HEX_ORG_TOKEN"
         fi
-      - mix deps.get
-      - mix format --check-formatted
-      - mix compile --warnings-as-errors
-      - mix test
-      - MIX_ENV=dev mix hex.build
-      - |
-        if [ -z "$$HEX_API_KEY" ]; then
+
+        mix deps.get
+        mix format --check-formatted
+        mix compile --warnings-as-errors
+        mix test
+        MIX_ENV=dev mix hex.build
+
+        if [ -z "$HEX_API_KEY" ]; then
           echo "ERROR: HEX_API_KEY is required to publish"
           exit 1
         fi
-      - mix hex.publish --yes
+
+        mix hex.publish --yes

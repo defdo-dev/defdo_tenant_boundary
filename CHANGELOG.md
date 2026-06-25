@@ -1,3 +1,8 @@
+# 0.2.1
+
+- Bump `defdo_tenant` dependency to `~> 0.10` to adopt the new
+  `Defdo.Tenant.Context` process-local context as the single source of truth.
+
 # 0.2.0
 
 **Breaking:** all wrapper modules graduate to the `Defdo.Tenant.Boundary.*` namespace,
