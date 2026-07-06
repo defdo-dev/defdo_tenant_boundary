@@ -13,6 +13,20 @@ defmodule Defdo.Tenant.Boundary.Task do
   Missing context follows `Defdo.Tenant.Config` enforcement: telemetry always
   emitted; `:warn`/`:test_enforce`/`:strict` log or raise.
 
+  ## Framework-owned async (Phoenix LiveView `start_async`, etc.)
+
+  Some async entry points hand you a callback and spawn the process
+  themselves — you cannot swap in `Task.async/1`. Use `wrap/1` to get back a
+  plain 0-arity function with the same capture/restore/cleanup behavior,
+  which any such API can call:
+
+      socket
+      |> start_async(:connect, Defdo.Tenant.Boundary.Task.wrap(fn -> do_work() end))
+
+  `wrap/1` captures context in the **calling** process immediately (same as
+  `async/1`); the returned function only performs the restore/run/cleanup
+  when invoked, wherever that ends up running.
+
   ## See also
 
     * `Defdo.Tenant.Boundary.Oban` — same pattern for Oban jobs
@@ -29,8 +43,19 @@ defmodule Defdo.Tenant.Boundary.Task do
   @doc "Tenant-safe `Task.async/1`."
   @spec async((-> any())) :: Task.t()
   def async(fun) when is_function(fun, 0) do
+    Task.async(wrap(fun))
+  end
+
+  @doc """
+  Captures the caller's tenant context now; returns a 0-arity function that
+  restores it, runs `fun`, and cleans up — for async APIs that spawn the
+  process themselves (Phoenix LiveView's `start_async`, custom supervisors,
+  etc.) instead of accepting a `Task.t()`.
+  """
+  @spec wrap((-> any())) :: (-> any())
+  def wrap(fun) when is_function(fun, 0) do
     captured = capture()
-    Task.async(fn -> run(captured, fun) end)
+    fn -> run(captured, fun) end
   end
 
   @doc "Tenant-safe `Task.async/3`."
