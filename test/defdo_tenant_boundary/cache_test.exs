@@ -1,5 +1,5 @@
 defmodule DefdoTenantBoundary.CacheTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Defdo.Tenant
   alias Defdo.Tenant.Boundary.Cache

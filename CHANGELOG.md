@@ -2,6 +2,8 @@
 
 - Raise the minimum `defdo_tenant` dependency to `~> 0.10.3` and refresh the
   lockfile to the current tenant platform release.
+- Stabilize enforcement-mode tests by serializing suites that temporarily
+  change the global `:defdo_tenant` application configuration.
 
 # 0.2.1
 

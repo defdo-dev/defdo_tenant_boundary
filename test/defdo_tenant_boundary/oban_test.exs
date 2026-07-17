@@ -1,5 +1,5 @@
 defmodule DefdoTenantBoundary.ObanTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Defdo.Tenant.Boundary.Oban, as: TenantOban
   alias Defdo.Tenant.Context
