@@ -1,3 +1,8 @@
+# 0.2.3
+
+- Raise the minimum `defdo_tenant` dependency to `~> 0.10.3` and refresh the
+  lockfile to the current tenant platform release.
+
 # 0.2.1
 
 - Bump `defdo_tenant` dependency to `~> 0.10` to adopt the new
