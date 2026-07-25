@@ -14,6 +14,13 @@
 # Woodpecker auto-injects global secrets as env vars with their exact names.
 # We do NOT use environment: from_secret: to avoid clobbering them with empty.
 
+# Tier 1: these steps run real container images, so they belong on the k8s
+# docker agent. Without this label Woodpecker sends the workflow to whichever
+# agent is free, and the local exec agent execs the `image:` string as a host
+# binary and dies: exec: "elixir:1.19.5": executable file not found.
+labels:
+  platform: linux/amd64
+
 when:
   - event: [push, pull_request]
     branch: main
