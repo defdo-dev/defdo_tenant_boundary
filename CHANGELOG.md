@@ -1,3 +1,13 @@
+# 0.2.4
+
+- Track `defdo_tenant` 0.10.4, a security release. It also dropped the `bypass`
+  test dependency, which kept `plug_cowboy`, `cowboy`, `cowlib` and `ranch` — a
+  second HTTP server — in the tree of anything building this package's test
+  environment.
+- `mix hex.audit` reports no advisories for this package. The existing
+  `~> 0.10.3` requirement already allowed 0.10.4, so only the lockfile moved and
+  this is a drop-in upgrade.
+
 # 0.2.3
 
 - Raise the minimum `defdo_tenant` dependency to `~> 0.10.3` and refresh the
