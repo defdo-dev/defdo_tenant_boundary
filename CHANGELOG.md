@@ -1,3 +1,15 @@
+# 0.2.5
+
+- Fixed: `Defdo.Tenant.Boundary.Oban.new/2` and `insert/3` built jobs through
+  `Oban.Job.new/2`, which sets only the worker field and silently drops every
+  option the worker declared (`queue`, `max_attempts`, `unique`, ...). Jobs
+  landed on the `default` queue with 20 attempts and, on engines that do not
+  poll `default`, stayed `available` forever. Jobs are now built through the
+  worker's own `new/2`, so declared options apply and explicit options
+  override them.
+- `new/2` without a `:worker` option now raises `ArgumentError` instead of
+  building a worker-less job.
+
 # 0.2.4
 
 - Track `defdo_tenant` 0.10.4, a security release. It also dropped the `bypass`
