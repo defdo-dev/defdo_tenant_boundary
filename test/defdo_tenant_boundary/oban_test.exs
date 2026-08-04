@@ -13,6 +13,17 @@ defmodule DefdoTenantBoundary.ObanTest do
     def perform(_job), do: :ok
   end
 
+  defmodule Support.DeclaredWorker do
+    use Oban.Worker,
+      queue: :declared,
+      max_attempts: 1,
+      unique: [period: 30]
+
+    @impl true
+    def perform(_job), do: :ok
+  end
+
+  alias Support.DeclaredWorker
   alias Support.Worker, as: TestWorker
 
   describe "new/2" do
@@ -63,6 +74,28 @@ defmodule DefdoTenantBoundary.ObanTest do
         else
           Application.delete_env(:defdo_tenant, :enforcement)
         end
+      end
+    end
+
+    test "applies the worker's declared opts (queue, max_attempts, unique)" do
+      cs = TenantOban.new(%{"monitor_id" => "m1"}, worker: DeclaredWorker)
+
+      job = Changeset.apply_changes(cs)
+      assert job.queue == "declared"
+      assert job.max_attempts == 1
+      assert job.unique.period == 30
+      assert job.worker == Oban.Worker.to_string(DeclaredWorker)
+    end
+
+    test "explicit opts override the worker's declared opts" do
+      cs = TenantOban.new(%{user_id: 1}, worker: DeclaredWorker, queue: :override)
+
+      assert Changeset.apply_changes(cs).queue == "override"
+    end
+
+    test "raises without a :worker option" do
+      assert_raise ArgumentError, ~r/:worker/, fn ->
+        TenantOban.new(%{user_id: 1}, [])
       end
     end
 

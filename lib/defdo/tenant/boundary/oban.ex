@@ -64,19 +64,35 @@ defmodule Defdo.Tenant.Boundary.Oban do
   @doc """
   Build a job changeset with tenant context captured into `meta`.
 
+  The job is built through the worker's own `new/2`, so the options the
+  worker declared (`use Oban.Worker, queue: ..., max_attempts: ...,
+  unique: ...`) apply; explicit opts override them. Building via
+  `Oban.Job.new/2` with `worker:` would only set the worker field and
+  silently drop everything the worker declared — which strands jobs on
+  the `default` queue.
+
   Returns an `Ecto.Changeset` ready for `Oban.insert/1`.
   """
   @spec new(map(), keyword()) :: Ecto.Changeset.t()
   def new(args, opts) when is_map(args) and is_list(opts) do
-    args
-    |> Oban.Job.new(opts)
+    {worker, opts} = Keyword.pop(opts, :worker)
+
+    unless is_atom(worker) and not is_nil(worker) do
+      raise ArgumentError,
+            "Defdo.Tenant.Boundary.Oban.new/2 requires the :worker option, " <>
+              "got: #{inspect(worker)}"
+    end
+
+    worker
+    |> worker_new(args, opts)
     |> attach_tenant()
   end
 
   @doc """
   Insert a tenant-scoped job.
 
-  Delegates to `Oban.Job.new/2`, attaches tenant context, and calls `Oban.insert/1`.
+  Builds the job via the worker's `new/2` (respecting its declared opts),
+  attaches tenant context, and calls `Oban.insert/1`.
   """
   @spec insert(module(), map(), keyword()) :: {:ok, Oban.Job.t()} | {:error, term()}
   def insert(worker, args, opts \\ []) when is_atom(worker) and is_map(args) and is_list(opts) do
@@ -97,6 +113,16 @@ defmodule Defdo.Tenant.Boundary.Oban do
   end
 
   # ── Internals ─────────────────────────────────────────────────────────────────
+
+  defp worker_new(worker, args, opts) do
+    Code.ensure_loaded(worker)
+
+    if function_exported?(worker, :new, 2) do
+      worker.new(args, opts)
+    else
+      Oban.Job.new(args, Keyword.put(opts, :worker, worker))
+    end
+  end
 
   defp put_meta(%Oban.Job{} = job) do
     case Context.capture() do
