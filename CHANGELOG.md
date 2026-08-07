@@ -1,3 +1,14 @@
+# 0.2.6
+
+- Allow `defdo_tenant` 0.11.x (`~> 0.10.3 or ~> 0.11`). Nothing in this package
+  changes; the requirement was the blocker. `defdo_tenant_boundary` is a
+  dependency of nearly every app, so its `~> 0.10.3` pin meant any app trying to
+  move to `defdo_tenant` 0.11.0 could not resolve at all. `defdo_tenant` 0.11.0
+  is migrator v4: `tenant_entitlements`, `tenant_provisions`, and
+  `tenant_profiles.tier` converted from a Postgres ENUM to `varchar(64)`. The
+  change is additive for anything already deployed — nothing here reads `tier`
+  or the new tables.
+
 # 0.2.5
 
 - Fixed: `Defdo.Tenant.Boundary.Oban.new/2` and `insert/3` built jobs through
