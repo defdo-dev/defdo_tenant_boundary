@@ -1,3 +1,11 @@
+# 0.2.7
+
+- Lock `defdo_tenant` 0.13.1 and `defdo_migrator` 0.2.4. Nothing in this
+  package changes. 0.13.1 makes the tenant migration prefix host-controlled;
+  migrator 0.2.4 fails closed on control-table errors (an error no longer
+  reads as "version 0" and re-applies the chain) and records `inserted_by`
+  ownership per applied version. Full suite against both: 53 tests, 0 failures.
+
 # 0.2.6
 
 - Allow `defdo_tenant` 0.11.x (`~> 0.10.3 or ~> 0.11`). Nothing in this package
