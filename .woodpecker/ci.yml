@@ -45,7 +45,7 @@ steps:
         HEX_ORG_NAME="defdo"
         export HEX_ORG_NAME HEX_ORG_TOKEN
 
-        mix do local.hex --force, local.rebar --force
+        mix do local.hex --force + local.rebar --force
 
         if [ -n "$HEX_ORG_TOKEN" ]; then
           mix hex.organization auth "$HEX_ORG_NAME" --key "$HEX_ORG_TOKEN"
@@ -66,7 +66,7 @@ steps:
       - |
         set -e
         # ~/.mix does NOT travel with the workspace — reinstall hex/rebar.
-        mix do local.hex --force, local.rebar --force
+        mix do local.hex --force + local.rebar --force
         # Reuses _build/deps from `compile` — no recompile.
         mix format --check-formatted
 
@@ -78,6 +78,6 @@ steps:
     commands:
       - |
         set -e
-        mix do local.hex --force, local.rebar --force
+        mix do local.hex --force + local.rebar --force
         # _build/test is already warm from `compile`; mix test just runs.
         mix test
