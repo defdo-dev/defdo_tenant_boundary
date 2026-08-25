@@ -1,5 +1,27 @@
 # 0.3.0
 
+## 0.4.0
+
+### Every requirement declares the line it resolves on
+
+- `defdo_tenant` `~> 0.14` -> `~> 0.15` (0.15.0, published today after its own
+  requirement collapse). `~> 0.14` is two-segment and would resolve 0.15.0
+  anyway — which is exactly the problem: it would be a lagging floor from the
+  moment the parent moved, and this package would need a second release to say
+  so.
+- `oban` `~> 2.17` -> `~> 2.23` (resolves 2.23.1). Six minors of drift under a
+  requirement that never complained.
+- `ex_doc` `~> 0.34` -> `~> 0.40`.
+
+Minor rather than patch: no source changed, but a narrowed requirement is not
+something a consumer can take blindly.
+
+**Consumers already follow.** Every one declares `defdo_tenant_boundary ~> 0.2`
+or `~> 0.3` — both two-segment, so both resolve 0.4.0 without an edit. The
+`~> 0.2` holders have in fact been resolving 0.3.x since that release.
+
+53 tests, 0 failures. `mix hex.outdated` empty.
+
 **Breaking for consumers still on `defdo_tenant` 0.13.x.**
 
 - Require `defdo_tenant` `~> 0.14` (was `~> 0.10.3 or ~> 0.11`).
