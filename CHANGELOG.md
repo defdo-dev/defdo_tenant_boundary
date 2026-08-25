@@ -1,3 +1,38 @@
+# 0.3.0
+
+**Breaking for consumers still on `defdo_tenant` 0.13.x.**
+
+- Require `defdo_tenant` `~> 0.14` (was `~> 0.10.3 or ~> 0.11`).
+
+  The old requirement was not blocking anything — a two-segment `~> 0.11` is
+  `>= 0.11.0 and < 1.0.0`, so 0.14.x already resolved. It is raised because a
+  parent package should not carry compatibility for versions its consumers
+  have stopped moving off; that is how the floor stays where the ecosystem
+  actually is instead of where it was.
+
+  This is a floor change, so it is a minor bump, not a patch: it changes what
+  consumers are able to resolve.
+
+## Who this affects, and how it will look
+
+`defdo_cms` and `defdo_notification_hub` declare `{:defdo_tenant, "~> 0.13.1"}`
+— three segments, so `>= 0.13.1 and < 0.14.0`. They cannot take this version.
+
+They will NOT see an error. Hex resolves to the highest satisfiable release and
+says nothing, so both stay on `defdo_tenant_boundary` 0.2.7 indefinitely and a
+`mix deps.update` there will look like it did nothing. Diagnose it by reading
+this package's requirement, not the host's.
+
+Unblocking them is the `defdo_tenant` V05 adoption, not a constraint edit:
+a `Tenant.Migrator` V05 wrapper (both sit at v04) and a skip rule that
+recognises `shared_`. `defdo_cms`'s `skip_table/1` returns `false` for every
+tuple; `defdo_notification_hub` uses the `Defdo.Tenant.Adapters.SkipTable`
+default, also false. Without that, V05's rename of `tenant_domain_policies` to
+`shared_domain_policies` leaves the renamed table tenant-scoped against a
+column it does not have.
+
+53 tests, 0 failures against defdo_tenant 0.14.2.
+
 # 0.2.7
 
 - Lock `defdo_tenant` 0.13.1 and `defdo_migrator` 0.2.4. Nothing in this
