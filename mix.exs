@@ -32,8 +32,8 @@ defmodule Defdo.Tenant.Boundary.MixProject do
 
   defp deps do
     [
-      {:defdo_tenant, "~> 0.18", organization: @organization},
-      {:oban, "~> 2.23"},
+      {:defdo_tenant, "~> 0.19", organization: @organization},
+      {:oban, "~> 2.24"},
       {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
