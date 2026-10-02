@@ -7,7 +7,8 @@ defmodule DefdoTenantBoundary.WebhookTest do
   # Mock repo for testing built-in resolvers without a real database.
   # Uses process dictionary to configure the profile that `one/2` returns.
   defmodule MockRepo do
-    def one(_query, _opts) do
+    def one(query, _opts) do
+      Process.put(:mock_repo_query, query)
       Process.get(:mock_repo_profile)
     end
   end
@@ -246,6 +247,52 @@ defmodule DefdoTenantBoundary.WebhookTest do
       )
 
       assert is_nil(Tenant.current_tenant_id())
+    end
+  end
+
+  describe "resolve/2 compares the canonical host form (defdo_tenant 0.18)" do
+    setup do
+      Process.delete(:mock_repo_profile)
+      Process.delete(:mock_repo_query)
+      :ok
+    end
+
+    # The values the query binds, in order: what the database is asked to equal.
+    defp bound_hosts do
+      query = Process.get(:mock_repo_query)
+
+      query.wheres
+      |> Enum.flat_map(& &1.params)
+      |> Enum.flat_map(fn {value, _type} -> List.wrap(value) end)
+      |> Enum.filter(&is_binary/1)
+      |> Enum.uniq()
+    end
+
+    test ":host strips a trailing dot and upper case, as the stored form does" do
+      Webhook.resolve(%{host: "Acme.Example.COM."}, resolver: :host, repo: MockRepo)
+
+      assert bound_hosts() == ["acme.example.com"]
+    end
+
+    test ":host sends a Unicode host as its punycode A-label" do
+      Webhook.resolve(%{host: "bücher.de"}, resolver: :host, repo: MockRepo)
+
+      assert "xn--bcher-kva.de" in bound_hosts()
+    end
+
+    test ":domain strips a trailing dot and upper case" do
+      Webhook.resolve(%{domain: "Widgets.Example.COM."}, resolver: :domain, repo: MockRepo)
+
+      assert bound_hosts() == ["widgets.example.com"]
+    end
+
+    test "a host that cannot be compared is unresolved without asking the repo" do
+      for resolver_data <- [%{host: " . "}, %{host: "."}] do
+        assert {:error, :unresolved} =
+                 Webhook.resolve(resolver_data, resolver: :host, repo: MockRepo)
+
+        assert Process.get(:mock_repo_query) == nil
+      end
     end
   end
 end
