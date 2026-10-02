@@ -1,3 +1,23 @@
+## 0.6.0
+
+### Requires defdo_tenant 0.19
+
+The `defdo_tenant` requirement rises from `~> 0.18` to `~> 0.19`. The lock moves
+`defdo_tenant` 0.18.0 to 0.19.0, `defdo_migrator` 0.4.1 to 0.5.0 (a dependency
+of tenant) and `oban` 2.23.1 to 2.24.1 (still inside `~> 2.23`). The boundary
+wrappers are unchanged; defdo_tenant 0.19 only removes its HTTP router and API
+(`Defdo.TenantWeb.*`), which this package never used. All 57 tests pass
+unchanged.
+
+This is a minor release, not a patch: a consumer that resolved 0.5.0 could still
+be on defdo_tenant 0.18; after this release it cannot.
+
+**Upgrading.** Your application must be on `defdo_tenant >= 0.19`, and its
+tenant migrations must have run up to V09 (until then a non-canonical stored
+host does not resolve through `Webhook.resolve/2`). If you used defdo_tenant's
+HTTP API, it is gone in 0.19: write your own authenticated controller around
+`Defdo.Tenant`.
+
 ## 0.5.0
 
 ### The webhook resolver finds a tenant by the canonical host form
