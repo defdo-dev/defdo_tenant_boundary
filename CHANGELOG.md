@@ -1,3 +1,35 @@
+## 0.5.0
+
+### The webhook resolver finds a tenant by the canonical host form
+
+`Webhook.resolve/2` with `resolver: :host` or `resolver: :domain` compared
+`String.downcase(host)` with the stored value. defdo_tenant 0.18.0 stores one
+canonical form (lower case, no trailing dot, punycode A-labels for non-ASCII
+hosts) and compares that form on lookup, so the plain downcase no longer found
+the tenant for `Acme.Example.COM.` (trailing dot, as some proxies and DNS
+tools send it) or for `bücher.de` (stored as `xn--bcher-kva.de`).
+
+Both resolvers now ask `Defdo.Tenant.Host.lookup_candidates/1`, as
+`Defdo.Tenant.get_profile_by/1` does with `"via_domain"`. `:host` also matches
+by `free_fqdn` and by any `allowed_domains` entry equal to the host (same
+semantics as before). A host with nothing to compare (blank, `.`, invalid
+UTF-8, over 1,024 bytes) is unresolved and the repo is not queried.
+
+- **Breaking for consumers on `defdo_tenant` 0.17 or older:** `defdo_tenant`
+  `~> 0.15` -> `~> 0.18`, because `Defdo.Tenant.Host` is new in 0.18.0.
+  Hosts must also run `Defdo.Tenant.Migrator` V8 and V9 (see the 0.18.0
+  changelog of defdo_tenant) in the same deploy: until V9 has rewritten a
+  non-canonical stored host, it does not resolve.
+- Tests: 57 (4 new, covering trailing dot, upper case, punycode and the
+  uncomparable host). The mock repo records the query, so the tests assert on
+  the hosts bound to it.
+- Lock only: defdo_tenant 0.15.0 -> 0.18.0, defdo_migrator 0.3.0 -> 0.4.1,
+  finch 0.23.0 -> 0.24.0, mint 1.10.0 -> 1.11.0, hpax 1.0.4 -> 1.1.0,
+  req 0.7.3 -> 0.7.4, telemetry_metrics 1.1.0 -> 1.2.0, ex_doc 0.40.3 ->
+  0.40.4. `oban` stays at 2.23.1: 2.24 is a minor of a runtime dependency, and
+  taking it would leave the `~> 2.23` floor lagging the resolved version, a
+  requirement change this release does not make.
+
 # 0.3.0
 
 ## 0.4.0

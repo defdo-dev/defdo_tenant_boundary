@@ -36,7 +36,7 @@ defmodule Defdo.Tenant.Boundary.Webhook do
 
   | Resolver | Trusted data | Query |
   |---|---|---|
-  | `:host` | `%{host: "..."}` | Matches `Profile.domain` or `allowed_domains` |
+  | `:host` | `%{host: "..."}` | Matches `Profile.domain`, `free_fqdn` or `allowed_domains` (canonical form) |
   | `:domain` | `%{domain: "..."}` | Matches `Profile.domain` |
   | `{module, function, args}` | Custom | User-defined MFA returning `%Profile{}` or `nil` |
 
@@ -80,6 +80,7 @@ defmodule Defdo.Tenant.Boundary.Webhook do
 
   alias Defdo.Tenant.Config
   alias Defdo.Tenant.Context
+  alias Defdo.Tenant.Host
   alias Defdo.Tenant.Schema.Profile
 
   @typedoc """
@@ -237,35 +238,43 @@ defmodule Defdo.Tenant.Boundary.Webhook do
 
   # ── Built-in resolvers ────────────────────────────────────────────────────────
 
+  # Both built-in resolvers compare the form defdo_tenant stores and looks up
+  # (`Defdo.Tenant.Host.lookup_candidates/1`, defdo_tenant 0.18): lower case, no
+  # trailing dot, and for a non-ASCII host its punycode A-label (plus its own
+  # Unicode spelling, for a row Migrator V9 has not converted yet). A bare
+  # `String.downcase/1` no longer finds the row for `Acme.Example.COM.` or
+  # `bücher.de`. A host with no candidate (blank, invalid UTF-8, over 1,024
+  # bytes) matches nothing and the repo is not asked.
   defp resolve_by_host(repo, %{host: host}) when is_binary(host) and host != "" do
-    normalized = String.downcase(host)
+    case Host.lookup_candidates(host) do
+      [] ->
+        nil
 
-    profile =
-      from(p in Profile,
-        where: p.is_active == true,
-        where:
-          p.domain == ^normalized or
-            fragment("? = ANY(?)", ^normalized, p.allowed_domains) or
-            p.free_fqdn == ^normalized
-      )
-      |> repo.one(skip_tenant_id: [reason: "webhook: trusted-edge tenant resolution by host"])
-
-    profile
+      hosts ->
+        from(p in Profile,
+          where: p.is_active == true,
+          where:
+            p.domain in ^hosts or p.free_fqdn in ^hosts or
+              fragment("? && ?", p.allowed_domains, type(^hosts, {:array, :string}))
+        )
+        |> repo.one(skip_tenant_id: [reason: "webhook: trusted-edge tenant resolution by host"])
+    end
   end
 
   defp resolve_by_host(_repo, _data), do: nil
 
   defp resolve_by_domain(repo, %{domain: domain}) when is_binary(domain) and domain != "" do
-    normalized = String.downcase(domain)
+    case Host.lookup_candidates(domain) do
+      [] ->
+        nil
 
-    profile =
-      from(p in Profile,
-        where: p.is_active == true,
-        where: p.domain == ^normalized
-      )
-      |> repo.one(skip_tenant_id: [reason: "webhook: trusted-edge tenant resolution by domain"])
-
-    profile
+      hosts ->
+        from(p in Profile,
+          where: p.is_active == true,
+          where: p.domain in ^hosts
+        )
+        |> repo.one(skip_tenant_id: [reason: "webhook: trusted-edge tenant resolution by domain"])
+    end
   end
 
   defp resolve_by_domain(_repo, _data), do: nil
