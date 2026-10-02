@@ -4,7 +4,7 @@
 
 The `defdo_tenant` requirement rises from `~> 0.18` to `~> 0.19`. The lock moves
 `defdo_tenant` 0.18.0 to 0.19.0, `defdo_migrator` 0.4.1 to 0.5.0 (a dependency
-of tenant) and `oban` 2.23.1 to 2.24.1 (still inside `~> 2.23`). The boundary
+of tenant) and `oban` 2.23.1 to 2.24.1 (its floor rises to `~> 2.24`, matching what the lock resolves). `telemetry_metrics` and `telemetry_poller` leave the lock: defdo_tenant 0.19 no longer depends on them. The boundary
 wrappers are unchanged; defdo_tenant 0.19 only removes its HTTP router and API
 (`Defdo.TenantWeb.*`), which this package never used. All 57 tests pass
 unchanged.
