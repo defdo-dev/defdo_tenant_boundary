@@ -1,3 +1,21 @@
+## 0.7.0
+
+### Requires defdo_tenant 0.21
+
+The `defdo_tenant` requirement rises from `~> 0.19` to `~> 0.21`. The lock moves
+`defdo_tenant` 0.19.0 to 0.21.0 and nothing else. The boundary wrappers are
+unchanged: this package does not call `tenant_origin_patterns/0`,
+`fetch_origin_patterns_now/0` or `AllowedOriginCache`, whose shapes changed in
+0.21, and it ships no migrations.
+
+This is a minor release, not a patch, for the same reason as 0.6.0: a consumer
+that resolved 0.6.0 could still be on defdo_tenant 0.19 or 0.20; after this
+release it cannot.
+
+**Upgrading.** Your application must be on `defdo_tenant >= 0.21`. Tenant V10
+and V11 wrappers (admin domains, host claims) belong to your own application;
+this package has none. See the defdo_tenant 0.20.0 and 0.21.0 changelogs.
+
 ## 0.6.0
 
 ### Requires defdo_tenant 0.19
