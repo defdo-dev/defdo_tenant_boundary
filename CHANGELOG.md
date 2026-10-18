@@ -1,3 +1,8 @@
+## Unreleased
+
+### Security — decimal 3.2.0 (EEF-CVE-2026-97853)
+- Dependencies updated to latest compatible versions: decimal 3.1.1 → 3.2.0, defdo_tenant 0.21.0 → 0.22.1, oban 2.24.1 → 2.24.2, req 0.7.4 → 0.7.5, makeup 1.2.2 → 1.2.3.
+
 ## 0.7.0
 
 ### Requires defdo_tenant 0.21
