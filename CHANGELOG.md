@@ -1,5 +1,13 @@
 ## Unreleased
 
+### Security
+
+- db_connection 2.10.2 → 2.10.3 (EEF-CVE-2026-133555, HIGH). flop (EEF-CVE-2026-130411) and ash (CVE-2026-124283) are not dependencies of this package.
+
+### Changed
+
+- Lock moved to latest deps: defdo_tenant 0.24.1 → 0.26.0, defdo_migrator 0.5.2 → 0.6.0, postgrex 0.22.4 → 0.23.0, finch 0.24.0 → 0.25.0, idna 7.1.0 → 8.0.0 (major, transitive), plus ex_doc 0.40.5, nimble_pool 1.2.0, telemetry 1.4.3.
+
 ### Dependencies
 
 - Lock-only update so `mix hex.audit` and `mix hex.outdated --within-requirements` are green: defdo_migrator, defdo_tenant, ecto, nimble_options.
